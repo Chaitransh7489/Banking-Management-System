@@ -1,0 +1,996 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SBI Core Banking Enterprise</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    
+    <!-- PDF Generation Libraries -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js"></script>
+    
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+        body { font-family: 'Inter', sans-serif; background-color: #f0f4f8; overflow: hidden; }
+        .sbi-blue { background-color: #002244; }
+        .sbi-light-blue { background-color: #00a0e3; }
+        .sbi-text { color: #002244; }
+        .glass-card { background: #ffffff; border-radius: 16px; box-shadow: 0 4px 20px rgba(0,0,0,0.05); border: 1px solid rgba(226, 232, 240, 0.8); }
+        .input-premium { background: #f8fafc; border: 1px solid #e2e8f0; transition: all 0.3s ease; }
+        .input-premium:focus { border-color: #00a0e3; box-shadow: 0 0 0 3px rgba(0, 160, 227, 0.1); background: #ffffff; }
+        .sidebar-item.active { background: rgba(255, 255, 255, 0.1); border-left: 4px solid #00a0e3; font-weight: 600; }
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
+        
+        .slide-down { animation: slideDown 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
+        @keyframes slideDown {
+            from { opacity: 0; transform: translateY(-15px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .tab-btn { transition: all 0.3s ease; }
+        .tab-active-green { background: #16a34a; color: white; box-shadow: 0 4px 12px rgba(22, 163, 74, 0.3); }
+        .tab-active-red { background: #dc2626; color: white; box-shadow: 0 4px 12px rgba(220, 38, 38, 0.3); }
+        .tab-active-blue { background: #2563eb; color: white; box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3); }
+    </style>
+</head>
+<body class="flex h-screen w-full">
+
+    <aside class="w-64 sbi-blue text-white flex flex-col shadow-2xl z-20">
+        <div class="h-20 flex items-center px-6 border-b border-blue-800">
+            <i class="fa-solid fa-building-columns text-3xl text-[#00a0e3] mr-3"></i>
+            <div>
+                <h1 class="text-xl font-bold tracking-wider leading-tight">SBI BANK</h1>
+            </div>
+        </div>
+        
+        <div class="py-6 flex-grow">
+            <p class="px-6 text-xs text-blue-400 font-semibold uppercase tracking-wider mb-3">Operations</p>
+            <nav class="space-y-1">
+                <button onclick="switchTab('create-customer', this)" class="sidebar-item active w-full flex items-center px-6 py-3 text-sm text-left hover:bg-white/5 transition">
+                    <i class="fa-solid fa-user-plus w-6 text-center mr-2 text-blue-300"></i> Customer
+                </button>
+                <button onclick="switchTab('open-account', this)" class="sidebar-item w-full flex items-center px-6 py-3 text-sm text-left hover:bg-white/5 transition">
+                    <i class="fa-solid fa-money-check-dollar w-6 text-center mr-2 text-blue-300"></i> Account Opening
+                </button>
+                <button onclick="switchTab('transactions', this)" class="sidebar-item w-full flex items-center px-6 py-3 text-sm text-left hover:bg-white/5 transition">
+                    <i class="fa-solid fa-money-bill-transfer w-6 text-center mr-2 text-blue-300"></i> Transactions
+                </button>
+                <button onclick="switchTab('reports', this)" class="sidebar-item w-full flex items-center px-6 py-3 text-sm text-left hover:bg-white/5 transition">
+                    <i class="fa-solid fa-file-pdf w-6 text-center mr-2 text-blue-300"></i> Reports
+                </button>
+            </nav>
+        </div>
+
+        <div class="p-4 border-t border-blue-800 bg-blue-900/50">
+            <div class="flex items-center">
+                <div class="h-10 w-10 rounded-full bg-blue-700 flex items-center justify-center border-2 border-[#00a0e3]">
+                    <i class="fa-solid fa-user-tie text-white"></i>
+                </div>
+                <div class="ml-3">
+                    <p class="text-xs font-medium text-white">Officer</p>
+                    <p class="text-[10px] text-green-400"><i class="fa-solid fa-circle text-[8px] mr-1"></i> System Online</p>
+                </div>
+            </div>
+        </div>
+    </aside>
+
+    <main class="flex-1 flex flex-col h-screen overflow-hidden bg-[#f0f4f8]">
+        
+        <header class="h-20 bg-white shadow-sm flex items-center justify-between px-8 z-10 relative">
+            <h2 id="page-title" class="text-2xl font-bold sbi-text">Customer Registration</h2>
+            <div class="flex items-center gap-6">
+                <div class="text-right">
+                    <p class="text-sm font-semibold text-gray-700" id="current-date">--</p>
+                    <p class="text-xs text-gray-500">Branch Code: 90</p>
+                </div>
+                <button class="h-10 w-10 rounded-full bg-gray-100 hover:bg-gray-200 flex items-center justify-center text-gray-600 transition">
+                    <i class="fa-solid fa-bell"></i>
+                </button>
+            </div>
+        </header>
+
+        <div class="flex-1 overflow-y-auto p-8 relative">
+            <div class="absolute top-0 right-0 opacity-5 pointer-events-none">
+                <i class="fa-brands fa-slack text-[300px]"></i>
+            </div>
+
+            <!-- TAB 1: CUSTOMER REGISTRATION -->
+            <div id="create-customer" class="glass-card max-w-5xl mx-auto p-8 relative z-10 animate-fade-in">
+                <!-- PREVIOUS CUSTOMER REGISTRATION CODE REMAINS UNCHANGED -->
+                <div class="flex items-center justify-between mb-8 pb-4 border-b border-gray-100">
+                    <div>
+                        <h3 class="text-lg font-semibold text-gray-800">Application Form</h3>
+                        <p class="text-sm text-gray-500">Mandatory fields are marked with an asterisk (*)</p>
+                    </div>
+                </div>
+
+                <form id="customerForm" class="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-6">
+                    <div>
+                        <label class="block text-xs font-semibold text-gray-600 mb-1"> FULL NAME *</label>
+                        <div class="relative">
+                            <i class="fa-regular fa-user absolute left-4 top-3.5 text-gray-400"></i>
+                            <input type="text" id="fullName" class="w-full pl-10 pr-4 py-2.5 rounded-lg outline-none input-premium text-sm font-medium" required>
+                        </div>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-gray-600 mb-1">REGISTERED EMAIL *</label>
+                        <div class="relative">
+                            <i class="fa-regular fa-envelope absolute left-4 top-3.5 text-gray-400"></i>
+                            <input type="email" id="email" class="w-full pl-10 pr-4 py-2.5 rounded-lg outline-none input-premium text-sm font-medium transition-colors duration-300" required oninput="validateEmail()">
+                        </div>
+                        <p id="emailFeedback" class="text-[10px] mt-1 hidden"></p>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-gray-600 mb-1">MOBILE NUMBER *</label>
+                        <div class="relative flex">
+                            <span class="inline-flex items-center px-3 rounded-l-lg border border-r-0 border-gray-200 bg-gray-50 text-gray-500 text-sm">+91</span>
+                            <input type="number" id="mobNo" class="w-full px-4 py-2.5 rounded-r-lg outline-none input-premium text-sm font-medium border border-gray-200 transition-colors duration-300" required oninput="validateMobile()">
+                        </div>
+                        <p id="mobNoFeedback" class="text-[10px] mt-1 hidden"></p>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-gray-600 mb-1">GENDER *</label>
+                        <select id="gender" class="w-full px-4 py-2.5 rounded-lg outline-none input-premium text-sm font-medium appearance-none">
+                            <option value="Male">Male</option>
+                            <option value="Female">Female</option>
+                            <option value="Other">Transgender/Other</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-gray-600 mb-1">AADHAR NUMBER *</label>
+                        <div class="relative">
+                            <i class="fa-solid fa-fingerprint absolute left-4 top-3.5 text-gray-400"></i>
+                            <input type="text" id="aadhar" placeholder="12 Digit UIDAI No." class="w-full pl-10 pr-4 py-2.5 rounded-lg outline-none input-premium text-sm font-medium tracking-widest transition-colors duration-300" maxlength="12" required oninput="validateAadhaar()">
+                        </div>
+                        <p id="aadharFeedback" class="text-[10px] mt-1 hidden"></p>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-gray-600 mb-1">PAN CARD NUMBER *</label>
+                        <div class="relative">
+                            <i class="fa-solid fa-id-card-clip absolute left-4 top-3.5 text-gray-400"></i>
+                            <input type="text" id="pan" placeholder="ABCDE1234F" class="w-full pl-10 pr-4 py-2.5 rounded-lg outline-none input-premium text-sm font-medium uppercase tracking-widest transition-colors duration-300" maxlength="10" required oninput="validatePan()">
+                        </div>
+                        <p id="panFeedback" class="text-[10px] mt-1 hidden"></p>
+                    </div>
+                    <div class="md:col-span-2">
+                        <label class="block text-xs font-semibold text-gray-600 mb-1"> ADDRESS *</label>
+                        <textarea id="address" rows="3" class="w-full px-4 py-3 rounded-lg outline-none input-premium text-sm font-medium resize-none" required></textarea>
+                    </div>
+                    <div class="md:col-span-2 flex justify-end mt-4 pt-4 border-t border-gray-100">
+                        <button type="button" onclick="document.getElementById('customerForm').reset(); resetValidations();" class="px-6 py-2.5 text-sm font-semibold text-gray-500 hover:text-gray-800 transition mr-4">Clear Form</button>
+                        <button type="button" onclick="createCustomer()" class="sbi-blue hover:bg-blue-900 text-white font-semibold py-2.5 px-8 rounded-lg shadow-lg hover:shadow-xl transition-all flex items-center gap-2">
+                            Proceed to Generate Account <i class="fa-solid fa-arrow-right"></i>
+                        </button>
+                    </div>
+                </form>
+            </div>
+
+            <!-- TAB 2: ACCOUNT OPENING -->
+            <div id="open-account" class="glass-card max-w-5xl mx-auto p-8 relative z-10 hidden">
+                <!-- PREVIOUS ACCOUNT OPENING CODE REMAINS UNCHANGED -->
+                <div class="bg-gradient-to-r from-[#002244] to-[#00a0e3] rounded-xl p-6 text-white mb-8 shadow-lg">
+                    <h3 class="text-lg font-semibold mb-2"><i class="fa-solid fa-wand-magic-sparkles mr-2"></i> Auto-Fill</h3>
+                    <div class="flex flex-col sm:flex-row gap-4">
+                        <div class="relative flex-grow">
+                            <i class="fa-solid fa-hashtag absolute left-4 top-4 text-blue-800"></i>
+                            <input type="number" id="searchCustId" class="w-full pl-11 pr-4 py-3 rounded-lg outline-none text-gray-900 text-lg font-bold shadow-inner focus:ring-4 focus:ring-blue-300" placeholder="Enter CIF / Customer ID">
+                        </div>
+                        <button onclick="fetchCustomerAndAutoFill()" class="bg-white text-[#002244] hover:bg-gray-100 font-bold py-3 px-8 rounded-lg shadow transition-all flex items-center justify-center gap-2 whitespace-nowrap">
+                            <i class="fa-solid fa-cloud-arrow-down"></i> Fetch Details
+                        </button>
+                    </div>
+                </div>
+
+                <div id="kyc-details-card" class="hidden mb-8 bg-blue-50/50 p-6 rounded-xl border border-blue-100 shadow-sm transition-all">
+                    <div class="grid grid-cols-2 md:grid-cols-4 gap-6 text-sm">
+                        <div><p class="text-[11px] text-gray-500 uppercase font-bold tracking-wider mb-1">Email ID</p><p id="disp-email" class="font-semibold text-gray-800 break-all">-</p></div>
+                        <div><p class="text-[11px] text-gray-500 uppercase font-bold tracking-wider mb-1">Mobile No</p><p id="disp-mobile" class="font-semibold text-gray-800">-</p></div>
+                        <div><p class="text-[11px] text-gray-500 uppercase font-bold tracking-wider mb-1">PAN Card</p><p id="disp-pan" class="font-semibold text-gray-800 uppercase">-</p></div>
+                        <div><p class="text-[11px] text-gray-500 uppercase font-bold tracking-wider mb-1">Aadhaar Card</p><p id="disp-aadhar" class="font-semibold text-gray-800 tracking-widest">-</p></div>
+                    </div>
+                    <div class="mt-4 pt-4 border-t border-blue-100">
+                        <p class="text-[11px] text-gray-500 uppercase font-bold tracking-wider mb-1">Registered Address</p>
+                        <p id="disp-address" class="font-semibold text-gray-700 text-sm">-</p>
+                    </div>
+                </div>
+
+                <div id="accountFormSection" class="opacity-40 pointer-events-none transition-all duration-500">
+                    <div class="flex items-center justify-between mb-6 pb-4 border-b border-gray-100">
+                        <h3 class="text-lg font-semibold text-gray-800">Account Initialization</h3>
+                        <span id="kyc-badge" class="px-3 py-1 bg-red-50 text-red-600 text-xs font-bold rounded-full border border-red-100"><i class="fa-solid fa-xmark mr-1"></i> KYC PENDING</span>
+                    </div>
+
+                    <form id="accountForm" class="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-6">
+                        <div>
+                            <label class="block text-xs font-semibold text-gray-600 mb-1">ACCOUNT HOLDER NAME (LOCKED)</label>
+                            <input type="text" id="accCustName" class="w-full px-4 py-2.5 rounded-lg bg-gray-100 border border-gray-200 text-gray-500 font-semibold cursor-not-allowed" readonly>
+                        </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-gray-600 mb-1">SELECT ACCOUNT TYPE *</label>
+                        <div class="relative">
+                            <i class="fa-solid fa-money-check absolute left-4 top-3.5 text-gray-400"></i>
+                            <select id="accType" class="w-full pl-10 pr-4 py-2.5 rounded-lg outline-none input-premium text-sm font-bold text-[#002244] appearance-none cursor-pointer">
+                                <option value="">Loading Account Types...</option>
+                            </select>
+                        </div>
+                    </div>
+                        <div>
+                            <label class="block text-xs font-semibold text-gray-600 mb-1">ACCOUNT MATURITY/CLOSING DATE (OPTIONAL)</label>
+                            <input type="date" id="closingDt" class="w-full px-4 py-2.5 rounded-lg outline-none input-premium text-sm font-medium cursor-pointer">
+                        </div>
+                        <div class="md:col-span-2 flex justify-end mt-6 border-t border-gray-100 pt-6">
+                            <button type="button" onclick="createAccount()" class="bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-10 rounded-lg shadow-lg hover:shadow-xl transition-all flex items-center gap-2">
+                                <i class="fa-solid fa-check-double"></i> Generate Account Number
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <!-- TAB 3: TRANSACTIONS PORTAL -->
+            <div id="transactions" class="max-w-5xl mx-auto relative z-10 hidden pb-20">
+                <!-- PREVIOUS TRANSACTIONS PORTAL REMAINS UNCHANGED -->
+                <div class="flex items-center justify-between mb-6">
+                    <div>
+                        <h3 class="text-2xl font-bold text-[#002244]"> Transaction Portal</h3>
+                    </div>
+                </div>
+
+                <div class="glass-card p-6 mb-8 relative border-t-4 border-blue-500">
+                    <h4 class="text-sm font-bold text-[#002244] mb-4 flex items-center uppercase tracking-wider"><i class="fa-solid fa-shield-halved mr-2 text-blue-500 text-lg"></i> Source Account Authentication</h4>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div>
+                            <label class="block text-xs font-semibold text-gray-500 mb-2 uppercase tracking-wide">Account Nature *</label>
+                            <div class="relative">
+                                <i class="fa-solid fa-filter absolute left-4 top-3.5 text-gray-400"></i>
+                                <select id="tranAccNature" class="w-full pl-11 pr-4 py-3 rounded-xl bg-gray-50 border border-gray-200 outline-none text-sm font-bold text-[#002244] appearance-none cursor-pointer focus:border-blue-400 transition-all">
+                                    <option value="">Loading Data...</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-semibold text-gray-500 mb-2 uppercase tracking-wide">Account Number *</label>
+                            <div class="flex gap-2">
+                                <div class="relative flex-1">
+                                    <i class="fa-solid fa-hashtag absolute left-4 top-3.5 text-gray-400"></i>
+                                    <input type="text" id="tranAcno" class="w-full pl-11 pr-4 py-3 rounded-xl bg-gray-50 border border-gray-200 outline-none text-sm font-bold text-[#002244] placeholder-gray-400 focus:border-blue-400 transition-all" placeholder="Enter Account No">
+                                </div>
+                                <button type="button" onclick="verifyAccountForTran()" class="bg-[#002244] hover:bg-blue-900 text-white px-6 rounded-xl text-sm font-bold transition-all shadow-md hover:shadow-lg">
+                                    Verify
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div id="verifiedAccountDetails" class="hidden mt-6 p-4 bg-green-50 border border-green-200 rounded-lg flex items-center justify-between transition-all">
+                        <div>
+                            <p class="text-[10px] text-green-700 font-bold uppercase tracking-wider mb-1">Authenticated Customer</p>
+                            <p id="lblVerifiedName" class="text-lg font-bold text-gray-900">-</p>
+                        </div>
+                        <div class="text-right border-l border-green-200 pl-6">
+                            <p class="text-[10px] text-green-700 font-bold uppercase tracking-wider mb-1">Account Opened</p>
+                            <p id="lblVerifiedDate" class="text-sm font-bold text-gray-900">-</p>
+                        </div>
+                        <div class="h-12 w-12 bg-green-100 rounded-full flex items-center justify-center text-green-600 text-xl border-2 border-green-200">
+                            <i class="fa-solid fa-user-shield"></i>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="actionPanelWrapper" class="opacity-40 pointer-events-none transition-all duration-500">
+                    <h4 class="text-sm font-bold text-[#002244] mb-3 uppercase tracking-wider pl-1"><i class="fa-solid fa-bolt mr-2 text-yellow-500"></i> Select Transaction </h4>
+                    <div class="bg-gray-200/70 p-1.5 rounded-xl flex w-full mb-4 gap-1">
+                        <button type="button" id="btnCashMode" onclick="selectPrimaryMode('Cash')" class="tab-btn flex-1 py-3 rounded-lg text-sm font-bold text-gray-600 hover:text-[#002244] focus:outline-none flex items-center justify-center">
+                            <i class="fa-solid fa-money-bill-wave mr-2 text-green-600"></i> Cash
+                        </button>
+                        <button type="button" id="btnTransferMode" onclick="selectPrimaryMode('Transfer')" class="tab-btn flex-1 py-3 rounded-lg text-sm font-bold text-gray-600 hover:text-[#002244] focus:outline-none flex items-center justify-center">
+                            <i class="fa-solid fa-arrow-right-arrow-left mr-2 text-blue-600"></i> Transfer
+                        </button>
+                    </div>
+
+                    <div id="cashSubOptions" class="hidden bg-gray-100 p-1.5 rounded-xl flex w-full mb-6 gap-1 border border-gray-200">
+                        <button type="button" id="btnDeposit" onclick="setTranMode('Deposit')" class="tab-btn flex-1 py-2 rounded-lg text-sm font-bold text-gray-600 focus:outline-none flex items-center justify-center">
+                            <i class="fa-solid fa-arrow-down-to-line mr-2"></i> Credit (Deposit)
+                        </button>
+                        <button type="button" id="btnWithdraw" onclick="setTranMode('Withdrawal')" class="tab-btn flex-1 py-2 rounded-lg text-sm font-bold text-gray-600 focus:outline-none flex items-center justify-center">
+                            <i class="fa-solid fa-upload mr-2"></i> Debit (Withdrawal)
+                        </button>
+                    </div>
+
+                    <div class="relative min-h-[250px]">
+                        <!-- Deposit Form -->
+                        <div id="formDeposit" class="hidden slide-down absolute w-full bg-white rounded-2xl shadow-lg border-t-4 border-green-500 p-8">
+                            <div class="mb-8">
+                                <label class="block text-xs font-semibold text-gray-600 mb-2 uppercase tracking-wide">Deposit Amount (₹) *</label>
+                                <div class="relative">
+                                    <i class="fa-solid fa-indian-rupee-sign absolute left-5 top-4 text-green-600 text-lg"></i>
+                                    <input type="number" id="amtDeposit" class="w-full pl-12 pr-4 py-4 rounded-xl bg-gray-50 border border-gray-200 outline-none text-xl font-bold text-gray-900 focus:border-green-500 focus:ring-2 focus:ring-green-100 transition-all" placeholder="0.00">
+                                </div>
+                            </div>
+                            <div class="flex justify-end">
+                                <button type="button" onclick="executeTransaction()" class="bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-8 rounded-xl shadow-lg hover:shadow-green-500/40 transition-all flex items-center gap-2">
+                                    Authorize Deposit <i class="fa-solid fa-check"></i>
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Withdrawal Form -->
+                        <div id="formWithdraw" class="hidden slide-down absolute w-full bg-white rounded-2xl shadow-lg border-t-4 border-red-500 p-8">
+                            <div class="mb-8">
+                                <label class="block text-xs font-semibold text-gray-600 mb-2 uppercase tracking-wide">Withdrawal Amount (₹) *</label>
+                                <div class="relative">
+                                    <i class="fa-solid fa-indian-rupee-sign absolute left-5 top-4 text-red-600 text-lg"></i>
+                                    <input type="number" id="amtWithdraw" class="w-full pl-12 pr-4 py-4 rounded-xl bg-gray-50 border border-gray-200 outline-none text-xl font-bold text-gray-900 focus:border-red-500 focus:ring-2 focus:ring-red-100 transition-all" placeholder="0.00">
+                                </div>
+                            </div>
+                            <div class="flex justify-end">
+                                <button type="button" onclick="executeTransaction()" class="bg-red-600 hover:bg-red-700 text-white font-bold py-3 px-8 rounded-xl shadow-lg hover:shadow-red-500/40 transition-all flex items-center gap-2">
+                                    Authorize Withdrawal <i class="fa-solid fa-lock"></i>
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Transfer Form -->
+                        <div id="formTransfer" class="hidden slide-down absolute w-full bg-white rounded-2xl shadow-lg border-t-4 border-blue-500 p-8">
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-8 mb-8">
+                                <div>
+                                    <label class="block text-xs font-semibold text-gray-600 mb-2 uppercase tracking-wide">Beneficiary Account No. *</label>
+                                    <div class="relative">
+                                        <i class="fa-solid fa-building-columns absolute left-5 top-4 text-blue-500 text-lg"></i>
+                                        <input type="text" id="targetAcno" class="w-full pl-12 pr-4 py-4 rounded-xl bg-gray-50 border border-gray-200 outline-none text-lg font-bold text-gray-900 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition-all" placeholder="Enter Receiver A/c">
+                                    </div>
+                                </div>
+                                <div>
+                                    <label class="block text-xs font-semibold text-gray-600 mb-2 uppercase tracking-wide">Transfer Amount (₹) *</label>
+                                    <div class="relative">
+                                        <i class="fa-solid fa-indian-rupee-sign absolute left-5 top-4 text-blue-500 text-lg"></i>
+                                        <input type="number" id="amtTransfer" class="w-full pl-12 pr-4 py-4 rounded-xl bg-gray-50 border border-gray-200 outline-none text-xl font-bold text-gray-900 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition-all" placeholder="0.00">
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="flex justify-end pt-2">
+                                <button type="button" onclick="executeTransaction()" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-8 rounded-xl shadow-lg hover:shadow-blue-500/40 transition-all flex items-center gap-2">
+                                    Process Transfer <i class="fa-solid fa-paper-plane"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- TAB 4: NEW REPORTS PORTAL -->
+            <div id="reports" class="glass-card max-w-5xl mx-auto p-8 relative z-10 hidden animate-fade-in pb-12">
+                <div class="flex items-center justify-between mb-8 pb-4 border-b border-gray-100">
+                    <div>
+                        <h3 class="text-lg font-semibold text-[#002244]">Account Statements & Reports</h3>
+                        <p class="text-sm text-gray-500">Generate and download comprehensive account reports in PDF format.</p>
+                    </div>
+                    <div class="h-12 w-12 bg-red-50 rounded-full flex items-center justify-center text-red-600 border border-red-100 shadow-sm">
+                        <i class="fa-solid fa-file-pdf text-xl"></i>
+                    </div>
+                </div>
+
+                <!-- Report Type Selection -->
+                <h4 class="text-sm font-bold text-[#002244] mb-3 uppercase tracking-wider pl-1">Select Report Scope</h4>
+                <div class="bg-gray-100 p-1.5 rounded-xl flex w-full mb-8 gap-1 shadow-inner border border-gray-200">
+                    <button type="button" id="btnReportAll" onclick="selectReportType('All')" class="tab-btn flex-1 py-3 rounded-lg text-sm font-bold bg-white text-[#002244] shadow-md focus:outline-none flex items-center justify-center border border-gray-200">
+                        <i class="fa-solid fa-users mr-2 text-blue-600"></i> All Accounts
+                    </button>
+                    <button type="button" id="btnReportInd" onclick="selectReportType('Individual')" class="tab-btn flex-1 py-3 rounded-lg text-sm font-bold text-gray-500 hover:text-[#002244] focus:outline-none flex items-center justify-center border border-transparent">
+                        <i class="fa-solid fa-user mr-2 text-gray-400"></i> Individual Account
+                    </button>
+                </div>
+
+                <!-- Report Form -->
+                <form id="reportForm" class="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-8 bg-gray-50/50 p-6 rounded-2xl border border-gray-100">
+                    
+                    <!-- Account No (Hidden by default for 'All') -->
+                    <div id="reportAcnoSection" class="md:col-span-2 hidden slide-down">
+                        <label class="block text-xs font-semibold text-gray-600 mb-2 uppercase tracking-wide">Target Account Number *</label>
+                        <div class="relative">
+                            <i class="fa-solid fa-hashtag absolute left-5 top-4 text-gray-400"></i>
+                            <input type="text" id="reportAcno" class="w-full pl-12 pr-4 py-3.5 rounded-xl outline-none border border-gray-200 text-lg font-bold text-[#002244] focus:border-blue-400 focus:ring-2 focus:ring-blue-100 transition-all shadow-sm" placeholder="Enter 12 Digit A/c No">
+                        </div>
+                    </div>
+
+                    <div>
+                        <label class="block text-xs font-semibold text-gray-600 mb-2 uppercase tracking-wide">From Date *</label>
+                        <div class="relative">
+                            <i class="fa-solid fa-calendar-days absolute left-5 top-4 text-gray-400"></i>
+                            <input type="date" id="reportFromDate" class="w-full pl-12 pr-4 py-3.5 rounded-xl outline-none border border-gray-200 text-sm font-bold text-gray-700 cursor-pointer focus:border-blue-400 focus:ring-2 focus:ring-blue-100 transition-all shadow-sm" required>
+                        </div>
+                    </div>
+
+                    <div>
+                        <label class="block text-xs font-semibold text-gray-600 mb-2 uppercase tracking-wide">To Date *</label>
+                        <div class="relative">
+                            <i class="fa-solid fa-calendar-days absolute left-5 top-4 text-gray-400"></i>
+                            <input type="date" id="reportToDate" class="w-full pl-12 pr-4 py-3.5 rounded-xl outline-none border border-gray-200 text-sm font-bold text-gray-700 cursor-pointer focus:border-blue-400 focus:ring-2 focus:ring-blue-100 transition-all shadow-sm" required>
+                        </div>
+                    </div>
+                    
+                    <div class="md:col-span-2 flex justify-end mt-4 pt-6 border-t border-gray-200 gap-4">
+                        <button type="button" onclick="cancelReport()" class="px-8 py-3 text-sm font-bold text-gray-600 border-2 border-gray-300 rounded-xl hover:bg-gray-100 hover:text-gray-900 transition flex items-center gap-2">
+                            <i class="fa-solid fa-xmark"></i> Cancel
+                        </button>
+                        <button type="button" onclick="triggerPDFGeneration()" class="bg-red-600 hover:bg-red-700 text-white font-bold py-3 px-8 rounded-xl shadow-lg hover:shadow-red-500/40 transition-all flex items-center gap-2">
+                            <i class="fa-solid fa-download"></i> Generate PDF Statement
+                        </button>
+                    </div>
+                </form>
+            </div>
+
+        </div>
+    </main>
+
+    <script>
+        const options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
+        document.getElementById('current-date').textContent = new Date().toLocaleDateString('en-IN', options);
+
+        const API_BASE_URL = "http://localhost:8080";
+
+        let isAadhaarValid = false;
+        let isPanValid = false;
+        let isEmailValid = false;
+        let isMobValid = false;
+
+        let activeTranMode = ''; 
+        let isAccountVerified = false; 
+
+        function switchTab(tabId, element) {
+            document.getElementById('create-customer').classList.add('hidden');
+            document.getElementById('open-account').classList.add('hidden');
+            document.getElementById('transactions').classList.add('hidden'); 
+            document.getElementById('reports').classList.add('hidden'); // NEW
+            
+            document.getElementById(tabId).classList.remove('hidden');
+            
+            document.querySelectorAll('.sidebar-item').forEach(el => el.classList.remove('active'));
+            element.classList.add('active');
+
+            const titles = {
+                'create-customer': 'Customer Registration',
+                'open-account': 'Account Opening Engine',
+                'transactions': 'Recon Transaction Portal',
+                'reports': 'Reports & Statements Engine'
+            };
+            document.getElementById('page-title').innerText = titles[tabId];
+        }
+
+        // =================================================================
+        // OLD VALIDATIONS & REGISTRATION/ACCOUNT/TRANSACTION LOGIC (NO CHANGES)
+        // =================================================================
+        function validateEmail() {
+            const emailInput = document.getElementById('email');
+            const feedback = document.getElementById('emailFeedback');
+            const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+            feedback.classList.remove('hidden');
+            if (emailRegex.test(emailInput.value)) {
+                feedback.innerText = "✓ Valid Email Format";
+                feedback.className = "text-[10px] mt-1 text-green-600 font-bold";
+                emailInput.classList.remove('border-red-500');
+                emailInput.classList.add('border-green-500', 'border-2');
+                isEmailValid = true;
+            } else {
+                feedback.innerText = "✗ Invalid: Please enter a valid email";
+                feedback.className = "text-[10px] mt-1 text-red-500 font-bold";
+                emailInput.classList.remove('border-green-500');
+                emailInput.classList.add('border-red-500', 'border-2');
+                isEmailValid = false;
+            }
+        }
+        function validateMobile() {
+            const mobInput = document.getElementById('mobNo');
+            const feedback = document.getElementById('mobNoFeedback');
+            const mobRegex = /^[6-9]\d{9}$/;
+            feedback.classList.remove('hidden');
+            if (mobRegex.test(mobInput.value)) {
+                feedback.innerText = "✓ Valid Mobile Number";
+                feedback.className = "text-[10px] mt-1 text-green-600 font-bold";
+                mobInput.classList.remove('border-red-500');
+                mobInput.classList.add('border-green-500', 'border-2');
+                isMobValid = true;
+            } else {
+                feedback.innerText = "✗ Invalid: Must be 10 digits";
+                feedback.className = "text-[10px] mt-1 text-red-500 font-bold";
+                mobInput.classList.remove('border-green-500');
+                mobInput.classList.add('border-red-500', 'border-2');
+                isMobValid = false;
+            }
+        }
+        function validateAadhaar() {
+            const aadharInput = document.getElementById('aadhar');
+            const feedback = document.getElementById('aadharFeedback');
+            const aadharRegex = /^[2-9]{1}[0-9]{11}$/;
+            feedback.classList.remove('hidden');
+            if (aadharRegex.test(aadharInput.value)) {
+                feedback.innerText = "✓ Valid Format";
+                feedback.className = "text-[10px] mt-1 text-green-600 font-bold";
+                aadharInput.classList.remove('border-red-500');
+                aadharInput.classList.add('border-green-500', 'border-2');
+                isAadhaarValid = true;
+            } else {
+                feedback.innerText = "✗ Invalid: Must be 12 digits (Cannot start with 0 or 1)";
+                feedback.className = "text-[10px] mt-1 text-red-500 font-bold";
+                aadharInput.classList.remove('border-green-500');
+                aadharInput.classList.add('border-red-500', 'border-2');
+                isAadhaarValid = false;
+            }
+        }
+        function validatePan() {
+            const panInput = document.getElementById('pan');
+            const feedback = document.getElementById('panFeedback');
+            panInput.value = panInput.value.toUpperCase(); 
+            const panRegex = /^[A-Z]{5}[0-9]{4}[A-Z]{1}$/;
+            feedback.classList.remove('hidden');
+            if (panRegex.test(panInput.value)) {
+                feedback.innerText = "✓ Valid Format";
+                feedback.className = "text-[10px] mt-1 text-green-600 font-bold";
+                panInput.classList.remove('border-red-500');
+                panInput.classList.add('border-green-500', 'border-2');
+                isPanValid = true;
+            } else {
+                feedback.innerText = "✗ Invalid: Format must be 5 Letters, 4 Digits, 1 Letter";
+                feedback.className = "text-[10px] mt-1 text-red-500 font-bold";
+                panInput.classList.remove('border-green-500');
+                panInput.classList.add('border-red-500', 'border-2');
+                isPanValid = false;
+            }
+        }
+        function resetValidations() {
+            document.getElementById('aadharFeedback').classList.add('hidden');
+            document.getElementById('panFeedback').classList.add('hidden');
+            document.getElementById('emailFeedback').classList.add('hidden');
+            document.getElementById('mobNoFeedback').classList.add('hidden');
+            document.getElementById('aadhar').classList.remove('border-red-500', 'border-green-500', 'border-2');
+            document.getElementById('pan').classList.remove('border-red-500', 'border-green-500', 'border-2');
+            document.getElementById('email').classList.remove('border-red-500', 'border-green-500', 'border-2');
+            document.getElementById('mobNo').classList.remove('border-red-500', 'border-green-500', 'border-2');
+            isAadhaarValid = false; isPanValid = false; isEmailValid = false; isMobValid = false;
+        }
+
+        async function createCustomer() {
+            const payload = {
+                fullName: document.getElementById('fullName').value,
+                email: document.getElementById('email').value,
+                mobNo: document.getElementById('mobNo').value,
+                gender: document.getElementById('gender').value,
+                aadhar: document.getElementById('aadhar').value,
+                pan: document.getElementById('pan').value,
+                address: document.getElementById('address').value
+            };
+            if(!payload.fullName || !payload.email || !payload.mobNo) {
+                Swal.fire('Required Fields Missing', 'Please fill all fields marked with *', 'warning'); return;
+            }
+            if(!isAadhaarValid || !isPanValid || !isEmailValid || !isMobValid) {
+                Swal.fire('Validation Error', 'Please enter valid details in all highlighted fields.', 'error'); return;
+            }
+            Swal.fire({ title: 'Processing ', allowOutsideClick: false, didOpen: () => { Swal.showLoading() } });
+            try {
+                const response = await fetch(`${API_BASE_URL}/Create`, {
+                    method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload)
+                });
+                if(!response.ok) throw new Error("Server rejected the request.");
+                const resultText = await response.text();
+                Swal.fire({ title: 'Registration Successful!', text: resultText, icon: 'success', confirmButtonColor: '#00a0e3' })
+                .then(() => { document.getElementById('customerForm').reset(); resetValidations(); });
+            } catch (error) {
+                Swal.fire({ icon: 'error', title: 'System Offline', text: 'Unable to connect to Server.' });
+            }
+        }
+
+        async function fetchCustomerAndAutoFill() {
+            const custId = document.getElementById('searchCustId').value;
+            if(!custId) { Swal.fire('Input Required', 'Please enter a Customer ID.', 'info'); return; }
+            Swal.fire({ title: 'Querying Database...', allowOutsideClick: false, didOpen: () => { Swal.showLoading() } });
+            try {
+                const response = await fetch(`${API_BASE_URL}/Fetch/${custId}`);
+                if(!response.ok) throw new Error("Not Found");
+                const data = await response.json();
+                
+                if(data && data.fullName) {
+                    Swal.close();
+                    document.getElementById('accountFormSection').classList.remove('opacity-40', 'pointer-events-none');
+                    document.getElementById('accCustName').value = data.fullName;
+                    document.getElementById('disp-email').innerText = data.email || 'Not Provided';
+                    document.getElementById('disp-mobile').innerText = data.mobNo || 'Not Provided';
+                    document.getElementById('disp-pan').innerText = data.pan || 'Not Provided';
+                    document.getElementById('disp-address').innerText = data.address || 'Not Provided';
+                    
+                    if(data.aadhar) {
+                        let last4 = String(data.aadhar).slice(-4);
+                        document.getElementById('disp-aadhar').innerText = `********${last4}`;
+                    } else { document.getElementById('disp-aadhar').innerText = 'Not Provided'; }
+                    document.getElementById('kyc-details-card').classList.remove('hidden');
+                    const badge = document.getElementById('kyc-badge');
+                    badge.className = "px-3 py-1 bg-green-50 text-green-600 text-xs font-bold rounded-full border border-green-100";
+                    badge.innerHTML = '<i class="fa-solid fa-check-circle mr-1"></i> KYC VERIFIED';
+                } else { throw new Error("Empty Data"); }
+            } catch (error) {
+                Swal.fire('Not Found', 'No customer registered with this ID.', 'error');
+                lockAccountForm();
+            }
+        }
+
+       async function fetchAccountTypes() {
+            try {
+                const selectDropdown = document.getElementById('accType');
+                const tranSelectDropdown = document.getElementById('tranAccNature'); 
+                const response = await fetch(`${API_BASE_URL}/GetAccountTypes`);
+                
+                if(!response.ok) throw new Error("Failed to load types");
+                const accountTypesData = await response.json();
+                
+                selectDropdown.innerHTML = '';
+                tranSelectDropdown.innerHTML = '<option value="" disabled selected>Select Nature</option>';
+                
+                if(accountTypesData.length > 0) {
+                    accountTypesData.forEach(type => {
+                        let option = document.createElement('option');
+                        option.value = type.acctype; option.text = type.accNature; 
+                        selectDropdown.appendChild(option);
+                        let tranOption = document.createElement('option');
+                        tranOption.value = type.acctype; tranOption.text = type.accNature; 
+                        tranSelectDropdown.appendChild(tranOption);
+                    });
+                }
+            } catch (error) { console.error("Dropdown error:", error); }
+        }
+        window.addEventListener('DOMContentLoaded', () => { fetchAccountTypes(); });
+
+        function lockAccountForm() {
+            document.getElementById('accountFormSection').classList.add('opacity-40', 'pointer-events-none');
+            document.getElementById('accCustName').value = '';
+            document.getElementById('kyc-details-card').classList.add('hidden');
+            const badge = document.getElementById('kyc-badge');
+            badge.className = "px-3 py-1 bg-red-50 text-red-600 text-xs font-bold rounded-full border border-red-100";
+            badge.innerHTML = '<i class="fa-solid fa-xmark mr-1"></i> KYC PENDING';
+        }
+
+        async function createAccount() {
+            const payload = {
+                custid: document.getElementById('searchCustId').value,
+                custname: document.getElementById('accCustName').value,
+                acctype: document.getElementById('accType').value, 
+                closingDt: document.getElementById('closingDt').value,
+                lastTranDt: new Date().toISOString().split('T')[0]
+            };
+            Swal.fire({ title: `Generating Account...`, allowOutsideClick: false, didOpen: () => { Swal.showLoading() } });
+            try {
+                const response = await fetch(`${API_BASE_URL}/Open`, {
+                    method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload)
+                });
+                if(!response.ok) throw new Error("Server Error");
+                const resultText = await response.text();
+                Swal.fire({ title: 'Account Provisioned!', text: resultText, icon: 'success', confirmButtonColor: '#16a34a' })
+                .then(() => { lockAccountForm(); document.getElementById('searchCustId').value = ''; });
+            } catch (error) { Swal.fire('Error', 'Could not provision account.', 'error'); }
+        }
+
+        async function verifyAccountForTran() {
+            const accNature = document.getElementById('tranAccNature').value;
+            const acno = document.getElementById('tranAcno').value;
+            if(!accNature || !acno) { Swal.fire('Input Required', 'Please select Account Nature and enter Account Number.', 'info'); return; }
+            Swal.fire({ title: 'Verifying Account...', allowOutsideClick: false, didOpen: () => { Swal.showLoading() } });
+            try {
+                const response = await fetch(`${API_BASE_URL}/VerifyAccount?acctype=${accNature}&acno=${acno}`);
+                if (response.status === 404) { Swal.fire('Error', 'API endpoint not found. Check your Controller.', 'error'); return; }
+                const data = await response.json();
+                
+                if(data && data.custname) {
+                    Swal.close();
+                    document.getElementById('verifiedAccountDetails').classList.remove('hidden');
+                    document.getElementById('lblVerifiedName').innerText = data.custname;
+                    document.getElementById('lblVerifiedDate').innerText = data.openingDt ? data.openingDt.substring(0, 10) : 'N/A';
+                    document.getElementById('actionPanelWrapper').classList.remove('opacity-40', 'pointer-events-none');
+                    isAccountVerified = true;
+                    Swal.fire({ toast: true, position: 'top-end', icon: 'success', title: `Account Verified: ${accNature}`, showConfirmButton: false, timer: 3000 });
+                } else { throw new Error("Invalid Combination"); }
+            } catch (error) {
+                Swal.fire('Verification Failed', 'Invalid Account Number or Nature mismatch.', 'error'); resetTranPanel();
+            }
+        }
+
+        document.getElementById('tranAcno').addEventListener('input', resetTranPanel);
+        document.getElementById('tranAccNature').addEventListener('change', resetTranPanel);
+
+        function resetTranPanel() {
+            isAccountVerified = false;
+            document.getElementById('verifiedAccountDetails').classList.add('hidden');
+            document.getElementById('actionPanelWrapper').classList.add('opacity-40', 'pointer-events-none');
+            document.getElementById('btnCashMode').className = "tab-btn flex-1 py-3 rounded-lg text-sm font-bold text-gray-600 hover:text-[#002244] focus:outline-none flex items-center justify-center";
+            document.getElementById('btnTransferMode').className = "tab-btn flex-1 py-3 rounded-lg text-sm font-bold text-gray-600 hover:text-[#002244] focus:outline-none flex items-center justify-center";
+            document.getElementById('cashSubOptions').classList.add('hidden');
+            setTranMode('');
+        }
+
+        function selectPrimaryMode(mode) {
+            document.getElementById('btnCashMode').className = "tab-btn flex-1 py-3 rounded-lg text-sm font-bold text-gray-600 hover:text-[#002244] focus:outline-none flex items-center justify-center";
+            document.getElementById('btnTransferMode').className = "tab-btn flex-1 py-3 rounded-lg text-sm font-bold text-gray-600 hover:text-[#002244] focus:outline-none flex items-center justify-center";
+            document.getElementById('cashSubOptions').classList.add('hidden');
+            setTranMode('');
+            if(mode === 'Cash') {
+                document.getElementById('btnCashMode').classList.add('bg-white', 'shadow-md', 'text-[#002244]');
+                document.getElementById('cashSubOptions').classList.remove('hidden');
+            } else if (mode === 'Transfer') {
+                document.getElementById('btnTransferMode').classList.add('bg-white', 'shadow-md', 'text-[#002244]');
+                setTranMode('Transfer');
+            }
+        }
+
+        function setTranMode(mode) {
+            activeTranMode = mode;
+            const btns = ['btnDeposit', 'btnWithdraw'];
+            btns.forEach(btn => {
+                if(document.getElementById(btn)) {
+                    document.getElementById(btn).className = "tab-btn flex-1 py-2 rounded-lg text-sm font-bold text-gray-600 focus:outline-none flex items-center justify-center";
+                }
+            });
+            document.getElementById('formDeposit').classList.add('hidden');
+            document.getElementById('formWithdraw').classList.add('hidden');
+            document.getElementById('formTransfer').classList.add('hidden');
+            document.getElementById('amtDeposit').value = '';
+            document.getElementById('amtWithdraw').value = '';
+            document.getElementById('amtTransfer').value = '';
+            document.getElementById('targetAcno').value = '';
+            
+            if (mode === 'Deposit') {
+                document.getElementById('btnDeposit').classList.add('tab-active-green');
+                document.getElementById('formDeposit').classList.remove('hidden');
+            } else if (mode === 'Withdrawal') {
+                document.getElementById('btnWithdraw').classList.add('tab-active-red');
+                document.getElementById('formWithdraw').classList.remove('hidden');
+            } else if (mode === 'Transfer') {
+                document.getElementById('formTransfer').classList.remove('hidden');
+            }
+        }
+
+        async function executeTransaction() {
+            if(!isAccountVerified) { Swal.fire('Not Verified', 'Please authenticate the Source Account first.', 'warning'); return; }
+            let payload = {
+                acctype: document.getElementById('tranAccNature').value, acno: document.getElementById('tranAcno').value,
+                transaction: '', tranType: '', cramt: "0", dramt: "0", revicerAccountNo: null
+            };
+            if (activeTranMode === 'Deposit') {
+                const amt = document.getElementById('amtDeposit').value;
+                if(!amt || amt <= 0) { Swal.fire('Invalid', 'Enter valid Deposit Amount', 'warning'); return; }
+                payload.transaction = 'Cash'; payload.tranType = 'Credit'; payload.cramt = String(amt);
+            } else if (activeTranMode === 'Withdrawal') {
+                const amt = document.getElementById('amtWithdraw').value;
+                if(!amt || amt <= 0) { Swal.fire('Invalid', 'Enter valid Withdrawal Amount', 'warning'); return; }
+                payload.transaction = 'Cash'; payload.tranType = 'Debit'; payload.dramt = String(amt);
+            } else if (activeTranMode === 'Transfer') {
+                const amt = document.getElementById('amtTransfer').value;
+                const recAcno = document.getElementById('targetAcno').value;
+                if(!amt || !recAcno || amt <= 0) { Swal.fire('Invalid', 'Enter valid Transfer Amount and Receiver A/c.', 'warning'); return; }
+                payload.transaction = 'transfer'; payload.tranType = 'Debit'; payload.dramt = String(amt); payload.revicerAccountNo = recAcno;
+            } else { return; }
+            Swal.fire({ title: 'Executing Transaction...', text: 'Updating Recon Ledgers', allowOutsideClick: false, didOpen: () => { Swal.showLoading() } });
+            try {
+                const response = await fetch(`${API_BASE_URL}/tran`, {
+                    method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload)
+                });
+                if(!response.ok) throw new Error("Transaction Failed");
+                const resultText = await response.text();
+                if(resultText.includes("Invalid") || resultText.toLowerCase().includes("fail") || resultText.toLowerCase().includes("empty") || resultText.toLowerCase().includes("insufficient")) {
+                    Swal.fire('Transaction Failed', resultText, 'error');
+                } else {
+                    Swal.fire({ title: 'Transaction Successful!', text: resultText, icon: 'success', confirmButtonColor: '#002244' }).then(() => {
+                        document.getElementById('tranAcno').value = ''; document.getElementById('tranAccNature').value = ''; resetTranPanel();
+                    });
+                }
+            } catch (error) { Swal.fire('Error', 'Server Error or Disconnected.', 'error'); }
+        }
+
+        // ==========================================
+        // NEW REPORT GENERATION (JSPDF IMPLEMENTATION)
+        // ==========================================
+        let activeReportType = 'All';
+
+        function selectReportType(type) {
+            activeReportType = type;
+            const btnAll = document.getElementById('btnReportAll');
+            const btnInd = document.getElementById('btnReportInd');
+            const acnoSection = document.getElementById('reportAcnoSection');
+            
+            btnAll.className = "tab-btn flex-1 py-3 rounded-lg text-sm font-bold text-gray-500 hover:text-[#002244] border border-gray-200 focus:outline-none flex items-center justify-center";
+            btnInd.className = "tab-btn flex-1 py-3 rounded-lg text-sm font-bold text-gray-500 hover:text-[#002244] border border-gray-200 focus:outline-none flex items-center justify-center";
+            
+            if (type === 'All') {
+                btnAll.classList.add('bg-white', 'shadow-md', 'text-[#002244]');
+                btnAll.classList.remove('text-gray-500');
+                acnoSection.classList.add('hidden');
+                document.getElementById('reportAcno').value = '';
+            } else {
+                btnInd.classList.add('bg-white', 'shadow-md', 'text-[#002244]');
+                btnInd.classList.remove('text-gray-500');
+                acnoSection.classList.remove('hidden');
+            }
+        }
+
+        function cancelReport() {
+            document.getElementById('reportForm').reset();
+            selectReportType('All'); 
+        }
+
+        async function triggerPDFGeneration() {
+            const fromDate = document.getElementById('reportFromDate').value;
+            const toDate = document.getElementById('reportToDate').value;
+            const acno = document.getElementById('reportAcno').value;
+
+            if(!fromDate || !toDate) {
+                Swal.fire('Dates Required', 'Please select both From Date and To Date.', 'warning');
+                return;
+            }
+            if(activeReportType === 'Individual' && !acno) {
+                Swal.fire('Account Missing', 'Please enter Account Number to generate an Individual Report.', 'warning');
+                return;
+            }
+
+            Swal.fire({
+                title: 'Fetching Data...',
+                html: 'Compiling secure banking records...',
+                allowOutsideClick: false,
+                didOpen: () => { Swal.showLoading(); }
+            });
+
+            try {
+                let apiUrl = "";
+                // Using endpoints based strictly on your backend Controller definitions
+                if (activeReportType === 'All') {
+                    apiUrl = `${API_BASE_URL}/ReportGenreat?reportType=All&fromDate=${fromDate}&toDate=${toDate}`;
+                } else {
+                    apiUrl = `${API_BASE_URL}/Indivisual?reportType=Individual&acno=${acno}&fromDate=${fromDate}&toDate=${toDate}`;
+                }
+
+                const response = await fetch(apiUrl);
+                if (!response.ok) throw new Error("Could not fetch reports data");
+                
+                const data = await response.json(); 
+                
+                if(!data || data.length === 0) {
+                    Swal.fire('No Records', 'No transactions found for the selected criteria.', 'info');
+                    return;
+                }
+
+                // Call the function to actually draw the PDF
+                generatePDFDocument(data, fromDate, toDate);
+
+                Swal.fire({
+                    title: 'Report Generated!',
+                    text: 'Your PDF Report has been successfully downloaded.',
+                    icon: 'success',
+                    confirmButtonColor: '#dc2626'
+                }).then(() => {
+                    cancelReport();
+                });
+
+            } catch(error) {
+                console.error("PDF Fetch Error:", error);
+                Swal.fire('System Error', 'Failed to fetch data or connect to the server.', 'error');
+            }
+        }
+
+       function generatePDFDocument(data, fromDate, toDate) {
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF();
+
+            // 1. DATA GROUPING LOGIC (Har account ko alag-alag group karna)
+            const groupedData = {};
+            
+            data.forEach(row => {
+                // Backend se aane wale array ke indexes:
+                // 0:custid, 1:acno, 2:name, 3:email, 4:mob, 5:pan, 6:cramt, 7:dramt, 8:type, 9:dt, 10:balance
+                const acno = row[1];
+                
+                // Agar ye account pehli baar aaya hai, toh iska naya box banao
+                if (!groupedData[acno]) {
+                    groupedData[acno] = {
+                        info: { 
+                            custid: row[0], 
+                            name: row[2], 
+                            email: row[3], 
+                            mob: row[4], 
+                            pan: row[5], 
+                            balance: row[10] // Closing balance
+                        },
+                        transactions: []
+                    };
+                }
+                
+                // Date format ko "20260726" se "26-07-2026" mein convert karna
+                let dtRaw = row[9] ? row[9].toString() : '';
+                let formattedDate = dtRaw.length === 8 ? 
+                    `${dtRaw.substring(6,8)}-${dtRaw.substring(4,6)}-${dtRaw.substring(0,4)}` : dtRaw;
+
+                // Amount formatting: Agar 0 hai toh '-' dikhayenge, warna Amount dikhayenge
+                let crAmt = (!row[6] || row[6] == 0 || row[6] == '0') ? '-' : `+ Rs. ${row[6]}`;
+                let drAmt = (!row[7] || row[7] == 0 || row[7] == '0') ? '-' : `- Rs. ${row[7]}`;
+
+                // Transactions ko account ke dabbe mein daal do
+                groupedData[acno].transactions.push({
+                    dt: formattedDate,
+                    type: row[8],
+                    cramt: crAmt,
+                    dramt: drAmt
+                });
+            });
+
+            // 2. PDF DRAWING (Header aur Title)
+            doc.setFontSize(18);
+            doc.setTextColor(0, 34, 68); // SBI Blue
+            doc.setFont("helvetica", "bold");
+            doc.text("SBI CORE BANKING - ACCOUNT STATEMENT", 14, 20);
+            
+            doc.setFontSize(10);
+            doc.setTextColor(100, 100, 100);
+            doc.setFont("helvetica", "normal");
+            doc.text(`Statement Period: ${fromDate} to ${toDate}`, 14, 28);
+            doc.text(`Report Generated On: ${new Date().toLocaleDateString()}`, 14, 33);
+            doc.line(14, 36, 196, 36); // Top separator line
+
+            let yPos = 45;
+
+            // 3. HAR ACCOUNT KE LIYE LOOP CHALANA
+            for (const [acno, accData] of Object.entries(groupedData)) {
+                
+                // Page ke end par aane wale hain toh naya page add karo
+                if (yPos > 240) {
+                    doc.addPage();
+                    yPos = 20;
+                }
+
+                // 🌟 Customer Info Header (Light Blue Background)
+                doc.setFillColor(240, 244, 248); 
+                doc.rect(14, yPos - 6, 182, 14, 'F');
+                
+                doc.setFontSize(11);
+                doc.setTextColor(0, 34, 68);
+                doc.setFont("helvetica", "bold");
+                doc.text(`Account No: ${acno}`, 16, yPos);
+                doc.text(`A/c Holder: ${accData.info.name || 'N/A'}`, 95, yPos);
+                
+                yPos += 6;
+                doc.setFontSize(9);
+                doc.setTextColor(80, 80, 80);
+                doc.setFont("helvetica", "normal");
+                doc.text(`PAN: ${accData.info.pan || 'N/A'} | Mobile: ${accData.info.mob || 'N/A'}`, 16, yPos);
+                doc.text(`Closing Balance: Rs. ${accData.info.balance || '0'}`, 95, yPos);
+                
+                yPos += 8;
+
+                // 🌟 Transaction Table Print Karna
+                const tableData = accData.transactions.map(t => [ t.dt, t.type, t.cramt, t.dramt ]);
+
+                doc.autoTable({
+                    startY: yPos,
+                    head: [['Date', 'Transaction Type', 'Credit (In)', 'Debit (Out)']],
+                    body: tableData,
+                    theme: 'grid',
+                    headStyles: { fillColor: [0, 160, 227], textColor: [255, 255, 255], fontStyle: 'bold' },
+                    styles: { fontSize: 9, cellPadding: 3 },
+                    margin: { left: 14, right: 14 },
+                    didDrawPage: function (data) {
+                        yPos = data.cursor.y; // Track end of table
+                    }
+                });
+
+                yPos = doc.lastAutoTable.finalY + 12; // Table ke baad thodi space
+
+                // 🌟 Users ke beech me Separator Line
+                doc.setDrawColor(200, 200, 200);
+                doc.setLineWidth(0.5);
+                doc.line(14, yPos - 5, 196, yPos - 5);
+                
+                yPos += 5; // Next account ke liye extra space
+            }
+
+            // PDF Download trigger
+            doc.save(`SBI_Bank_Statement_${activeReportType}.pdf`);
+        }
+    </script>
+</body>
+</html>
