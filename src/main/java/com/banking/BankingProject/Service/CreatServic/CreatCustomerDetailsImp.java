@@ -5,6 +5,7 @@ import com.banking.BankingProject.Entity.CustomerDetails;
 import com.banking.BankingProject.Repositry.BankingRepositry;
 
 @Service
+
 public class CreatCustomerDetailsImp implements CreatCustomerDetails {
 
     @Autowired
